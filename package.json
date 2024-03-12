@@ -1,20 +1,20 @@
 {
-  "name": "@seneca/gateway-express",
+  "name": "@seneca/gateway-fastify",
   "version": "0.11.0",
-  "main": "dist/gateway-express.js",
+  "main": "dist/gateway-fastify.js",
   "type": "commonjs",
   "types": "dist/gateway-express.d.ts",
-  "description": "Handle incoming messages within express, defining an endpoint that accepts Seneca messages.",
-  "homepage": "https://github.com/senecajs/seneca-gateway-express",
+  "description": "Handle incoming messages within fastify, defining an endpoint that accepts Seneca messages.",
+  "homepage": "https://github.com/senecajs/seneca-gateway-fastifys",
   "keywords": [
     "gateway",
-    "express",
+    "fastify",
     "seneca"
   ],
-  "author": "Richard Rodger - richardrodger.com",
+  "author": "Kieran Desmond - kieran@kierandesmond.me",
   "repository": {
     "type": "git",
-    "url": "git://github.com/senecajs/seneca-gateway-express.git"
+    "url": "git://github.com/senecajs/seneca-gateway-fastify.git"
   },
   "scripts": {
     "test": "jest --coverage",

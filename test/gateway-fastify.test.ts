@@ -84,9 +84,12 @@ describe('gateway-fastify', () => {
           const seneca = this
           const handler = seneca.export('gateway-fastify/handler')
 
+         
           const req = make_mock_request({ body: { bad: 2 } })
           const res = {
+            
             status(_code: any) {
+              console.log('status',_code)
               throw new Error('response code should not be sent')
             },
 
@@ -140,7 +143,7 @@ describe('gateway-fastify', () => {
               return this
             },
 
-            send(out: any) {
+            send(out: unknown) {
               responses.push(out)
             }
           }
@@ -154,11 +157,13 @@ describe('gateway-fastify', () => {
 
           expect(responses.length).toEqual(1)
 
+          console.log("object" ,responses)
           expect(responses[0]).toMatchObject({
             code: 'act_not_found',
-            name: 'Error'
+            name: 'Error',
           })
 
+          
           return done()
         } catch (err) {
           return done(err)

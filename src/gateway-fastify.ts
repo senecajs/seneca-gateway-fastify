@@ -2,11 +2,31 @@
 
 
 import { Open } from 'gubu'
-
-
+import fastify from 'fastify';
 import type {
   GatewayResult
 } from '@seneca/gateway'
+const createError = require('@fastify/error')
+
+
+
+const app = fastify();
+
+
+interface SenecaActionErrorOptions {
+  code?: string; // optional
+  // We can include other properties as needed
+}
+
+class SenecaActionError extends Error {
+  code: any;
+  constructor(message :any , options: SenecaActionErrorOptions = {}) {
+    super(message);
+    this.name = 'SenecaActionError';
+    if(options.code){ this.code = options.code;}
+    this.code = options?.code || 'ACT_ERROR';
+  }
+}
 
 
 type GatewayFastifyOptions = {
@@ -26,8 +46,8 @@ type GatewayFastifyOptions = {
 }
 
 //need to refactor directive to use fastify's error handling or custom error handling
-type GatewayExpressDirective = {
-  // Call Express response.next (passes error if defined)
+type GatewayFastifyDirective = {
+  // Call fastify response.next (passes error if defined)
   next?: boolean
 
   // Set/remove login cookie
@@ -74,10 +94,28 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
 
 
   /* adding an error handler to help port from express to fastify */
-  async function errorHandler(err: any, req: any, reply: any, next: any) {
-  
-    
-  } 
+  const errorHandler = (err: any, req: any, reply: any, next: any) => {
+    try {
+      app.setErrorHandler((error, request, reply) => {
+        // Log the error
+        this.log.error(err);
+      
+        // Check if it's a known error and respond accordingly
+        if (err.statusCode) {
+          console.log('statusCode: ', err.statusCode)
+          //reply.status(err.statusCode).send({ error: err.message });
+        } else {
+          // Handle unknown errors
+          console.log('statusCode: ', 500)
+          //reply.status(500).send({ error: 'Internal Server Error' });
+        }
+      });
+    }
+    catch (err) {
+      console.log('errorHandler Error', err)
+      
+    }
+  } //end of errorHandler
 
   /* changed handler to handle fastify request and reply instead of req, res which is typical to express */
 
@@ -103,7 +141,7 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
     //Question: do I need to adapt the gateway function to use fastify's reply instead of res?
     const result: GatewayResult = await gateway(json, { req, reply })
 
-    let gateway$: GatewayExpressDirective | undefined = result.gateway$
+    let gateway$: GatewayFastifyDirective | undefined = result.gateway$
 
     if (gateway$) {
       if (gateway$.auth && options.auth) {
@@ -129,13 +167,14 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
       if (gateway$.header) {
         reply.set(gateway$.header)
       }
-
+      console.log(gateway$.next)
       if (gateway$.next) {
         // Uses the default express error handler
         //return next(result.error ? result.out : undefined)
-        //refactored to use fastify's error handling instead of next
-         reply.statusCode = 400
-
+        //refactored - leaving structure here for future reference, can add custom error handling here
+        //assumption is that the existing system would initially continue to pass the next parameter.
+          // to prevent breakage, the next parameter is left in place
+          return reply.send(result.error ? result.out : undefined)
       }
 
       // Should be last as final action
@@ -146,12 +185,17 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
 
       if (result.error) {
         if (options.error?.next) {
-          return reply.status(gateway$.status || 500)
+          
+          const error = new SenecaActionError('Error in Seneca action', { code: 'ACT_MISSING_ERROR' });
+          throw error; // Let Fastify handle the error
+          
         }
         else {
           // refactored to use fastify's reply.status instead of res.status
-          reply.status(gateway$.status || 500)
-          return reply.send(result.out) 
+          if (gateway$.status) {
+            reply.status(gateway$.status) //refactored to use fastify's reply.status instead of res.status
+          }
+          return reply.send(options.error) 
         }
       }
       else {

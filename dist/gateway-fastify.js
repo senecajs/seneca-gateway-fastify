@@ -8,14 +8,35 @@ const gubu_1 = require("gubu");
 const fastify_1 = __importDefault(require("fastify"));
 const createError = require('@fastify/error');
 const app = (0, fastify_1.default)();
-class SenecaActionError extends Error {
-    constructor(message, options = {}) {
-        super(message);
-        this.name = 'SenecaActionError';
-        if (options.code) {
-            this.code = options.code;
+// adding a new error handler to replace the use of next(error) in express
+app.setErrorHandler((error, request, reply) => {
+    console.error(error);
+    if (error instanceof SenecaActionError) {
+        if (error.code) {
+            console.log('Error code:', error.code);
+            reply.status(500).send({ error: error.message });
+            return;
         }
-        this.code = (options === null || options === void 0 ? void 0 : options.code) || 'ACT_ERROR';
+        else {
+            // Handle unknown errors
+            console.log('Unhandled error, status 500');
+            reply.status(500).send({ error: 'Internal Server Error' });
+            return;
+        }
+    }
+    else {
+        // Pass non-SenecaActionError errors to Fastify's default error handler
+        reply.send(error);
+    }
+});
+class SenecaActionError extends Error {
+    constructor(options = {}) {
+        super(options.code || 'ACT_ERROR');
+        this.code = options.code || 'ACT_ERROR'; // Explicitly setting the error name
+        // Ensure the stack trace is correctly captured in V8 environments (e.g., Chrome, Node.js)
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, SenecaActionError);
+        }
     }
 }
 function gateway_fastify(options) {
@@ -55,8 +76,8 @@ function gateway_fastify(options) {
     }; //end of errorHandler
     /* changed handler to handle fastify request and reply instead of req, res which is typical to express */
     async function handler(req, reply, next) {
-        var _a, _b, _c;
         const body = req.body;
+        var _a, _b, _c;
         const json = 'string' === typeof body ? parseJSON(body) : body;
         console.log('BODY', json);
         // TODO: doc as a standard feature
@@ -67,7 +88,7 @@ function gateway_fastify(options) {
             query: req.query,
         };
         if (json.error$) { //refactored to use fastify's reply instead of res
-            return reply.code(400).send(json);
+            return reply.status(400).send(json);
         }
         //Question: do I need to adapt the gateway function to use fastify's reply instead of res?
         const result = await gateway(json, { req, reply });
@@ -90,31 +111,23 @@ function gateway_fastify(options) {
             if (gateway$.header) {
                 reply.set(gateway$.header);
             }
-            console.log(gateway$.next);
+            console.log("Next", gateway$.next);
+            gateway$.next = false;
             if (gateway$.next) {
                 // Uses the default express error handler
-                //return next(result.error ? result.out : undefined)
-                //refactored - leaving structure here for future reference, can add custom error handling here
-                //assumption is that the existing system would initially continue to pass the next parameter.
-                // to prevent breakage, the next parameter is left in place
-                return reply.send(result.error ? result.out : undefined);
+                return next(result.error ? result.out : undefined);
             }
             // Should be last as final action
             else if ((_a = gateway$.redirect) === null || _a === void 0 ? void 0 : _a.location) {
-                //refactored to use fastify's reply.redirect instead of res.redirect
                 return reply.redirect((_b = gateway$.redirect) === null || _b === void 0 ? void 0 : _b.location);
             }
             if (result.error) {
                 if ((_c = options.error) === null || _c === void 0 ? void 0 : _c.next) {
-                    const error = new SenecaActionError('Error in Seneca action', { code: 'ACT_MISSING_ERROR' });
-                    throw error; // Let Fastify handle the error
+                    return next(result.error ? result.out : undefined);
                 }
                 else {
-                    // refactored to use fastify's reply.status instead of res.status
-                    if (gateway$.status) {
-                        reply.status(gateway$.status); //refactored to use fastify's reply.status instead of res.status
-                    }
-                    return reply.send(options.error);
+                    reply.status(gateway$.status || 500);
+                    return reply.send(result.out);
                 }
             }
             else {

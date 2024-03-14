@@ -18,7 +18,8 @@ app.setErrorHandler((error, request, reply) => {
   if (error instanceof SenecaActionError) {
     if (error.code) {
       console.log('Error code:', error.code);
-      reply.status(500).send({ error: error.message });
+      
+      reply.status(400).send({ error: error.message });// changed to error 400, as technically the request is incorrect however the server tried.
       return 
     } else {
       // Handle unknown errors

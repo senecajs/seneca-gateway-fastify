@@ -52,5 +52,10 @@
     "express": ">=4",
     "seneca": ">=3",
     "seneca-promisify": ">=3"
+  },
+  "dependencies": {
+    "@fastify/error": "^3.4.1",
+    "@seneca/repl": "^8.1.1",
+    "fastify": "^4.26.2"
   }
 }

@@ -10,28 +10,9 @@ const createError = require('@fastify/error')
 
 
 
-const app = fastify();
-// adding a new error handler to replace the use of next(error) in express
-app.setErrorHandler((error, request, reply) => {
-  console.error(error);
 
-  if (error instanceof SenecaActionError) {
-    if (error.code) {
-      console.log('Error code:', error.code);
-      
-      reply.status(400).send({ error: error.message });// changed to error 400, as technically the request is incorrect however the server tried.
-      return 
-    } else {
-      // Handle unknown errors
-      console.log('Unhandled error, status 500');
-      reply.status(500).send({ error: 'Internal Server Error' });
-      return
-    }
-  } else {
-    // Pass non-SenecaActionError errors to Fastify's default error handler
-    reply.send(error);
-  }
-});
+// adding a new error handler to replace the use of next(error) in express
+
 
 interface SenecaActionErrorOptions {
   name?: string;
@@ -117,32 +98,6 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
   })
 
 
-  /* adding an error handler to help port from express to fastify */
-  const errorHandler = (err: any, req: any, reply: any, next: any) => {
-    try {
-      app.setErrorHandler((error, request, reply) => {
-        // Log the error
-        this.log.error(err);
-      
-        // Check if it's a known error and respond accordingly
-        if (err.statusCode) {
-          console.log('statusCode: ', err.statusCode)
-          //reply.status(err.statusCode).send({ error: err.message });
-        } else {
-          // Handle unknown errors
-          console.log('statusCode: ', 500)
-          //reply.status(500).send({ error: 'Internal Server Error' });
-        }
-      });
-    }
-    catch (err) {
-      console.log('errorHandler Error', err)
-      
-    }
-  } //end of errorHandler
-
-  /* changed handler to handle fastify request and reply instead of req, res which is typical to express */
-
   async function handler(req: any, reply: any, next: any) {
     const body = req.body
     var _a, _b, _c;
@@ -191,7 +146,7 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
       if (gateway$.header) {
         reply.set(gateway$.header);
     }
-    console.log("Next",gateway$.next)
+
     gateway$.next = false
     if (gateway$.next) {
         // Uses the default express error handler

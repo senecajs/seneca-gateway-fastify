@@ -1,34 +1,8 @@
 "use strict";
 /* Copyright © 2021-2022 Richard Rodger, MIT License. */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const gubu_1 = require("gubu");
-const fastify_1 = __importDefault(require("fastify"));
 const createError = require('@fastify/error');
-const app = (0, fastify_1.default)();
-// adding a new error handler to replace the use of next(error) in express
-app.setErrorHandler((error, request, reply) => {
-    console.error(error);
-    if (error instanceof SenecaActionError) {
-        if (error.code) {
-            console.log('Error code:', error.code);
-            reply.status(500).send({ error: error.message });
-            return;
-        }
-        else {
-            // Handle unknown errors
-            console.log('Unhandled error, status 500');
-            reply.status(500).send({ error: 'Internal Server Error' });
-            return;
-        }
-    }
-    else {
-        // Pass non-SenecaActionError errors to Fastify's default error handler
-        reply.send(error);
-    }
-});
 class SenecaActionError extends Error {
     constructor(options = {}) {
         super(options.code || 'ACT_ERROR');
@@ -52,29 +26,6 @@ function gateway_fastify(options) {
             ctx.req.seneca$ = this;
         }
     });
-    /* adding an error handler to help port from express to fastify */
-    const errorHandler = (err, req, reply, next) => {
-        try {
-            app.setErrorHandler((error, request, reply) => {
-                // Log the error
-                this.log.error(err);
-                // Check if it's a known error and respond accordingly
-                if (err.statusCode) {
-                    console.log('statusCode: ', err.statusCode);
-                    //reply.status(err.statusCode).send({ error: err.message });
-                }
-                else {
-                    // Handle unknown errors
-                    console.log('statusCode: ', 500);
-                    //reply.status(500).send({ error: 'Internal Server Error' });
-                }
-            });
-        }
-        catch (err) {
-            console.log('errorHandler Error', err);
-        }
-    }; //end of errorHandler
-    /* changed handler to handle fastify request and reply instead of req, res which is typical to express */
     async function handler(req, reply, next) {
         const body = req.body;
         var _a, _b, _c;
@@ -111,7 +62,6 @@ function gateway_fastify(options) {
             if (gateway$.header) {
                 reply.set(gateway$.header);
             }
-            console.log("Next", gateway$.next);
             gateway$.next = false;
             if (gateway$.next) {
                 // Uses the default express error handler

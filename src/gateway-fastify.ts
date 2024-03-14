@@ -161,7 +161,7 @@ function gateway_fastify(this: any, options: GatewayFastifyOptions) {
             return next(result.error ? result.out : undefined);
         }
         else {
-            reply.status(gateway$.status || 500);
+            reply.status(gateway$.status || 400);
             return reply.send(result.out);
         }
     

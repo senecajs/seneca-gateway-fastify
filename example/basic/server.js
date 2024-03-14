@@ -29,6 +29,14 @@ async function runSeneca() {
 
 
 async function runFastify(seneca) {
+
+  fastify.setErrorHandler((error, request, reply) => {
+    // Your error handling logic here
+    console.error("Error!!!!!",error);
+    reply.status(400).send({ error });
+  });
+
+  
   // Parse all incoming requests as JSON, regardless of Content-Type
   fastify.addContentTypeParser('*', (request, payload, done) => {
     let data = '';

@@ -1,0 +1,8 @@
+
+
+# Example curl commands
+
+curl -d '{"biz":"logic","op":"sum","left":1,"right":2}' http://localhost:8080/api
+curl -d '{"biz":"logic","op":"mul","left":2,"right":3}' http://localhost:8080/api
+
+
